@@ -23,16 +23,24 @@ export class ApproveNewUserListener extends Listener {
             return;
         }
 
-        let guild: Guild = await this.configManager.getGuild();
-        let member: GuildMember = await guild.members.fetch(user.id);
-        let roles = member.roles.valueOf().map(role => role.id);
+        let guild = await this.configManager.getGuild();
+        let memberReact = await guild.members.fetch(user.id);
+        let roles = memberReact.roles.valueOf().map(role => role.id);
 
         if (!roles.includes(this.configManager.getAdminRoleId())) {
             return;
         }
 
-        await member.roles.add(this.configManager.getMemberRoleId());
-        await member.roles.remove(this.configManager.getGuestRoleId());
+        let message = messageReaction.message;
+        let memberReacted = message.member;
+        if (!memberReacted) {
+            return;
+        }
+
+        await memberReacted.roles.add(this.configManager.getMemberRoleId());
+        await memberReacted.roles.remove(this.configManager.getGuestRoleId());
+
+        let messageUrl = message.url;
 
         // TODO:: Inviare messaggio privato e link d'invito whatsapp
     }

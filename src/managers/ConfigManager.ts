@@ -1,0 +1,46 @@
+import "reflect-metadata"
+import config from "../../config.json"
+import { Guild } from "discord.js";
+import { container } from '@sapphire/framework';
+
+export class ConfigManager {
+
+    protected guild: Guild|null = null;
+
+    public async getGuild() {
+        if (!this.guild) {
+            this.guild = await container.client.guilds.fetch(config.guild)
+        }
+        return this.guild;
+    }
+
+    public getAdminRoleId()
+    {
+        return config.roles.types.admin;
+    }
+
+    public getCollaboratorRoleId()
+    {
+        return config.roles.types.collaborator;
+    }
+
+    public getSupporterRoleId()
+    {
+        return config.roles.types.supporter;
+    }
+
+    public getBotRoleId()
+    {
+        return config.roles.types.bot;
+    }
+
+    public getMemberRoleId()
+    {
+        return config.roles.types.member;
+    }
+
+    public getGuestRoleId()
+    {
+        return config.roles.types.guest;
+    }
+}

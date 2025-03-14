@@ -19,20 +19,22 @@ export class ApproveNewUserListener extends Listener {
     }
 
     public override async run(messageReaction: MessageReaction, user: User) {
+        // Verifica che è stata assegnata la reaction per approvare un nuovo utente
         if (messageReaction.emoji.name !== '✅') {
             return;
         }
 
         let guild = await this.configManager.getGuild();
         let memberReact = await guild.members.fetch(user.id);
-        let roles = memberReact.roles.valueOf().map(role => role.id);
 
+        // Verifica che la reaction è stata assegnata da un admin
+        let roles = memberReact.roles.valueOf().map(role => role.id);
         if (!roles.includes(this.configManager.getAdminRoleId())) {
             return;
         }
 
-        let message = messageReaction.message;
-        let memberReacted = message.member;
+        // Aggiunge il ruolo dei membri e toglie quello degli ospiti
+        let memberReacted = messageReaction.message.member;
         if (!memberReacted) {
             return;
         }
@@ -40,7 +42,8 @@ export class ApproveNewUserListener extends Listener {
         await memberReacted.roles.add(this.configManager.getMemberRoleId());
         await memberReacted.roles.remove(this.configManager.getGuestRoleId());
 
-        let messageUrl = message.url;
+        // Salva il nuovo membro nel database
+        let messageUrl = messageReaction.message.url;
 
         // TODO:: Inviare messaggio privato e link d'invito whatsapp
     }

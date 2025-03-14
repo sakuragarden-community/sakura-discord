@@ -24,10 +24,9 @@ export class ApproveNewUserListener extends Listener {
             return;
         }
 
+        // Verifica che la reaction è stata assegnata da un admin
         let guild = await this.configManager.getGuild();
         let memberReact = await guild.members.fetch(user.id);
-
-        // Verifica che la reaction è stata assegnata da un admin
         let roles = memberReact.roles.valueOf().map(role => role.id);
         if (!roles.includes(this.configManager.getAdminRoleId())) {
             return;

@@ -3,6 +3,8 @@ import { autoInjectable } from "tsyringe";
 import { Listener } from '@sapphire/framework';
 import { DMChannel, Guild, GuildMember, Message, MessageReaction, User} from "discord.js";
 import { ConfigManager } from "../../managers/ConfigManager";
+import * as fs from "fs";
+
 
 @autoInjectable()
 export class ApproveNewUserListener extends Listener {
@@ -41,9 +43,15 @@ export class ApproveNewUserListener extends Listener {
         await memberReacted.roles.add(this.configManager.getMemberRoleId());
         await memberReacted.roles.remove(this.configManager.getGuestRoleId());
 
+        // Invia messaggio di benvenuto
+        try {
+            console.log(fs.readFileSync("messages/welcome.md", "utf-8"));
+        } catch (error) {
+            console.error(error);
+        }
+
         // Salva il nuovo membro nel database
         let messageUrl = messageReaction.message.url;
-
         // TODO:: Inviare messaggio privato e link d'invito whatsapp
     }
 

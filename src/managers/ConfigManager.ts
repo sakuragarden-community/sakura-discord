@@ -14,6 +14,11 @@ export class ConfigManager {
         return this.guild;
     }
 
+    public getInitRolesId()
+    {
+        return config.roles.init;
+    }
+
     public getAdminRoleId()
     {
         return config.roles.types.admin;

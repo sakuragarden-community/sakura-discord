@@ -3,6 +3,7 @@ import { autoInjectable } from "tsyringe";
 import { Listener } from '@sapphire/framework';
 import {DMChannel, GuildMember, Message, User} from "discord.js";
 import * as fs from "fs";
+import {ConfigManager} from "../../managers/ConfigManager";
 
 @autoInjectable()
 export class AddListener extends Listener {
@@ -10,6 +11,7 @@ export class AddListener extends Listener {
     public constructor(
         context: Listener.LoaderContext,
         options: Listener.Options,
+        protected configManager: ConfigManager,
     ) {
         super(context, {
             ...options,
@@ -25,6 +27,11 @@ export class AddListener extends Listener {
         } catch (error) {
             console.error(error);
         }
+
+        // Assegna ruoli di base
+        this.configManager.getInitRolesId().forEach(id => {
+            member.roles.add(id);
+        })
     }
 
 }

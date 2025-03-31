@@ -1,7 +1,8 @@
 import "reflect-metadata"
 import { autoInjectable } from "tsyringe";
 import { Listener } from '@sapphire/framework';
-import { DMChannel, Message, User } from "discord.js";
+import {DMChannel, GuildMember, Message, User} from "discord.js";
+import * as fs from "fs";
 
 @autoInjectable()
 export class AddListener extends Listener {
@@ -16,8 +17,14 @@ export class AddListener extends Listener {
         });
     }
 
-    public override async run(message: Message) {
-        // ...
+    public override async run(member: GuildMember) {
+        // Invia messaggio di benvenuto
+        try {
+            let welcomeMessage = fs.readFileSync("messages/welcome.md", "utf-8");
+            await member.send(welcomeMessage);
+        } catch (error) {
+            console.error(error);
+        }
     }
 
 }

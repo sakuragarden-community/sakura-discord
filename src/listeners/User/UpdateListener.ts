@@ -1,7 +1,7 @@
 import "reflect-metadata"
 import { autoInjectable } from "tsyringe";
 import { Listener } from '@sapphire/framework';
-import { DMChannel, Message, User } from "discord.js";
+import {DMChannel, GuildMember, Message, User} from "discord.js";
 
 @autoInjectable()
 export class UpdateListener extends Listener {
@@ -16,8 +16,8 @@ export class UpdateListener extends Listener {
         });
     }
 
-    public override async run(message: Message) {
-        // ...
+    public override async run(oldMember: GuildMember, newMember: GuildMember) {
+        // TODO:: Secondo rilascio
     }
 
 }

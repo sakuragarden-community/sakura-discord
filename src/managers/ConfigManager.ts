@@ -43,4 +43,9 @@ export class ConfigManager {
     {
         return config.roles.types.guest;
     }
+
+    public getMainChannelId()
+    {
+        return config.channels.main;
+    }
 }

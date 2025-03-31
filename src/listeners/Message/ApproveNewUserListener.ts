@@ -4,7 +4,7 @@ import { Listener } from '@sapphire/framework';
 import { DMChannel, Guild, GuildMember, Message, MessageReaction, User} from "discord.js";
 import { ConfigManager } from "../../managers/ConfigManager";
 import * as fs from "fs";
-
+import {config} from "dotenv";
 
 @autoInjectable()
 export class ApproveNewUserListener extends Listener {
@@ -34,25 +34,47 @@ export class ApproveNewUserListener extends Listener {
             return;
         }
 
-        // Aggiunge il ruolo dei membri e toglie quello degli ospiti
+        // Verifica che l'utente esiste
         let memberReacted = messageReaction.message.member;
         if (!memberReacted) {
             return;
         }
 
+        // Verifica che non sia già membro
+        roles = memberReacted.roles.valueOf().map(role => role.id);
+        if (roles.includes(this.configManager.getMemberRoleId())) {
+            return;
+        }
+
+        // Aggiunge il ruolo dei membri e toglie quello degli ospiti
         await memberReacted.roles.add(this.configManager.getMemberRoleId());
         await memberReacted.roles.remove(this.configManager.getGuestRoleId());
 
-        // Invia messaggio di benvenuto
+        // Invia messaggio di approvazione in privato
         try {
-            console.log(fs.readFileSync("messages/welcome.md", "utf-8"));
+            let approvedMessage = fs.readFileSync("messages/approved.md", "utf-8");
+            await memberReacted.send(approvedMessage);
+        } catch (error) {
+            console.error(error);
+        }
+
+        // Invia messaggio di approvazione in pubblico
+        try {
+            let newentryMessage = fs.readFileSync("messages/newentry.md", "utf-8");
+            newentryMessage = newentryMessage.replace('{{new_member}}', memberReacted.toString())
+                .replace('{{presentation_url}}', messageReaction.message.url)
+                .replace('{{user_id}}', memberReacted.user.id);
+            let channel = await guild.channels.fetch(this.configManager.getMainChannelId());
+            if (channel && channel.isTextBased()) {
+                await channel.send(newentryMessage);
+            }
         } catch (error) {
             console.error(error);
         }
 
         // Salva il nuovo membro nel database
         let messageUrl = messageReaction.message.url;
-        // TODO:: Inviare messaggio privato e link d'invito whatsapp
+        // ...
     }
 
 }

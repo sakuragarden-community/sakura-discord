@@ -4,7 +4,7 @@ import { Listener } from '@sapphire/framework';
 import { DMChannel, Guild, GuildMember, Message, MessageReaction, User} from "discord.js";
 import { ConfigManager } from "../../managers/ConfigManager";
 import * as fs from "fs";
-import {config} from "dotenv";
+import axios from 'axios';
 
 @autoInjectable()
 export class ApproveNewUserListener extends Listener {
@@ -59,10 +59,11 @@ export class ApproveNewUserListener extends Listener {
         }
 
         // Invia messaggio di approvazione in pubblico
+        let messageUrl = messageReaction.message.url;
         try {
             let newentryMessage = fs.readFileSync("messages/newentry.md", "utf-8");
             newentryMessage = newentryMessage.replace('{{new_member}}', memberReacted.toString())
-                .replace('{{presentation_url}}', messageReaction.message.url)
+                .replace('{{presentation_url}}', messageUrl)
                 .replace('{{user_id}}', memberReacted.user.id);
             let channel = await guild.channels.fetch(this.configManager.getMainChannelId());
             if (channel && channel.isTextBased()) {
@@ -73,8 +74,12 @@ export class ApproveNewUserListener extends Listener {
         }
 
         // Salva il nuovo membro nel database
-        let messageUrl = messageReaction.message.url;
-        // ...
+        const response = await axios.post('http://sakuragarden.it/api/users', {
+            'discord_id': memberReacted.id,
+            'name': memberReacted.displayName,
+            'introduction_url': messageUrl,
+        });
+        console.log(response);
     }
 
 }

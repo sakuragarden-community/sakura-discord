@@ -11,6 +11,7 @@
   "dependencies": {
     "@sapphire/framework": "^5.2.1",
     "@sapphire/plugin-subcommands": "^7.0.0",
+    "axios": "^1.8.4",
     "discord.js": "^14.16.2",
     "dotenv": "^16.4.7",
     "reflect-metadata": "^0.2.2",

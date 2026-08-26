@@ -4,3 +4,4 @@ node_modules
 config.json
 dist
 z-doc
+src/commands/StagingOneshotCommand.ts

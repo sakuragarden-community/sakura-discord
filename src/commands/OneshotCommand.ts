@@ -1,7 +1,9 @@
 import { Command } from '@sapphire/framework';
 import { ChatInputCommandInteraction, SlashCommandBuilder } from 'discord.js';
 import { autoInjectable } from 'tsyringe';
+import axios from 'axios';
 import { ConfigManager } from '../managers/ConfigManager';
+import { KodamaApiManager } from '../managers/KodamaApiManager';
 
 @autoInjectable()
 export class OneshotCommand extends Command {
@@ -9,6 +11,7 @@ export class OneshotCommand extends Command {
     context: Command.Context,
     options: Command.Options,
     protected configManager?: ConfigManager,
+    protected kodamaApiManager?: KodamaApiManager,
   ) {
     super(context, { ...options });
   }
@@ -35,7 +38,31 @@ export class OneshotCommand extends Command {
       return;
     }
 
-    // Il comando, per ora, non esegue alcuna azione.
-    await interaction.reply({ content: 'Questo comando al momento non esegue alcuna azione.', ephemeral: true });
+    try {
+      const token = await this.kodamaApiManager!.getBearerToken();
+
+      await axios.post(
+        `${process.env.KODAMA_API_BASE_URL}/api/v1/members`,
+        {
+          discordId: '123456789012345678',
+          username: 'sakura_mochi',
+          joinedAt: '2026-08-26T10:15:00Z',
+          leftAt: null,
+          status: 'ACTIVE',
+          presentation: 'Ciao a tutti, sono nuovo nel server!',
+          experience: 0,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      await interaction.reply({ content: 'Richiesta inviata con successo alle API Kodama.', ephemeral: true });
+    } catch (error) {
+      console.error(error);
+      await interaction.reply({ content: "Errore durante la chiamata alle API Kodama.", ephemeral: true });
+    }
   }
 }

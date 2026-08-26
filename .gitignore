@@ -4,4 +4,4 @@ node_modules
 config.json
 dist
 z-doc
-/src/managers/KodamaApiManager.ts
+src/commands/StagingOneshotCommand.ts

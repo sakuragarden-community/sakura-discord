@@ -48,9 +48,13 @@ function resolveSetupContent(content?: string): string {
         if (stat && stat.isFile()) {
           return fs.readFileSync(p, 'utf-8');
         }
-      } catch {}
+      } catch (e) {
+        console.warn(`[SetupCommand] Impossibile leggere il contenuto da "${p}":`, e);
+      }
     }
-  } catch {}
+  } catch (e) {
+    console.error('[SetupCommand] Errore durante la risoluzione del contenuto:', e);
+  }
 
   // Fallback: treat it as plain text
   return value;
@@ -96,18 +100,27 @@ async function clearTextChannel(channel: TextChannel): Promise<number> {
 
       // Try bulk delete first for messages younger than 14 days
       try {
-        const bulkCount = await channel.bulkDelete(fetched, true).catch(() => 0 as any);
+        const bulkCount = await channel.bulkDelete(fetched, true).catch((e) => {
+          console.warn(`[SetupCommand] Bulk delete fallito nel canale ${channel.id}:`, e);
+          return 0 as any;
+        });
         const countNumber = typeof bulkCount === 'number' ? bulkCount : (bulkCount?.size ?? 0);
         totalDeleted += countNumber;
-      } catch {}
+      } catch (e) {
+        console.warn(`[SetupCommand] Errore durante il bulk delete nel canale ${channel.id}:`, e);
+      }
 
       // Delete remaining old messages individually
       for (const msg of fetched.values()) {
         try {
           await msg.delete();
           totalDeleted++;
-        } catch {
+        } catch (e) {
           // ignore failures (e.g. permissions or already deleted)
+          // 10008 = Unknown Message: atteso dopo un bulk delete andato a buon fine
+          if ((e as any)?.code !== 10008) {
+            console.warn(`[SetupCommand] Impossibile cancellare il messaggio ${msg.id} nel canale ${channel.id}:`, e);
+          }
         }
       }
 
@@ -117,12 +130,16 @@ async function clearTextChannel(channel: TextChannel): Promise<number> {
       // Safety: if fewer than 100 returned, next fetch may return 0 soon
       if (fetched.size < 100) {
         // Check again quickly
-        const check = await channel.messages.fetch({ limit: 1 }).catch(() => null as any);
+        const check = await channel.messages.fetch({ limit: 1 }).catch((e) => {
+          console.warn(`[SetupCommand] Impossibile verificare i messaggi residui nel canale ${channel.id}:`, e);
+          return null as any;
+        });
         if (!check || check.size === 0) break;
       }
     }
-  } catch {
+  } catch (e) {
     // ignore errors, return what we could delete
+    console.error(`[SetupCommand] Errore durante la pulizia del canale ${channel.id}:`, e);
   }
   return totalDeleted;
 }
@@ -189,6 +206,7 @@ export class SetupCommand extends Command {
     try {
       raw = fs.readFileSync(setupFile, 'utf-8');
     } catch (e) {
+      console.error(`[SetupCommand] Impossibile leggere il file di setup "${setupFile}":`, e);
       await interaction.editReply('Impossibile leggere il file di setup.');
       return;
     }
@@ -197,6 +215,7 @@ export class SetupCommand extends Command {
     try {
       payload = JSON.parse(raw);
     } catch (e) {
+      console.error(`[SetupCommand] JSON non valido nel file di setup "${setupFile}":`, e);
       await interaction.editReply('Il file di setup non contiene un JSON valido.');
       return;
     }
@@ -226,10 +245,12 @@ export class SetupCommand extends Command {
       try {
         const ch = await interaction.client.channels.fetch(chanIdCheck);
         if (!ch || !ch.isTextBased()) {
+          console.error(`[SetupCommand] Canale ${chanIdCheck} non valido o non testuale per la sottocategoria "${subcategory}".`);
           await interaction.editReply(`Canale non valido per la sottocategoria "${subcategory}". Nessuna azione eseguita.`);
           return;
         }
-      } catch {
+      } catch (e) {
+        console.error(`[SetupCommand] Impossibile recuperare il canale ${chanIdCheck} per la sottocategoria "${subcategory}":`, e);
         await interaction.editReply(`Canale non trovato per la sottocategoria "${subcategory}". Nessuna azione eseguita.`);
         return;
       }
@@ -247,6 +268,7 @@ export class SetupCommand extends Command {
         const ch = await interaction.client.channels.fetch(chanId);
         if (!ch || !ch.isTextBased()) {
           errors++;
+          console.error(`[SetupCommand] Sezione "${key}": canale ${chanId} non valido o non testuale.`);
           continue;
         }
         const textChannel = ch as TextChannel;
@@ -258,8 +280,9 @@ export class SetupCommand extends Command {
             await clearTextChannel(textChannel);
             channelWasCleared = true;
             cleanedChannels.add(textChannel.id);
-          } catch {
+          } catch (e) {
             // Even if cleanup fails, proceed with sending to avoid blocking
+            console.error(`[SetupCommand] Sezione "${key}": pulizia del canale ${textChannel.id} fallita:`, e);
           }
         }
 
@@ -268,6 +291,7 @@ export class SetupCommand extends Command {
           try {
             if (!m || !m.type) {
               errors++;
+              console.error(`[SetupCommand] Sezione "${key}": messaggio senza campo "type" valido, elemento ignorato.`);
               continue;
             }
 
@@ -282,7 +306,8 @@ export class SetupCommand extends Command {
               let existing: any = null;
               try {
                 existing = await textChannel.messages.fetch(m.id);
-              } catch {
+              } catch (e) {
+                console.error(`[SetupCommand] Sezione "${key}": impossibile recuperare il messaggio ${m.id} nel canale ${textChannel.id}:`, e);
                 existing = null;
               }
 
@@ -303,7 +328,11 @@ export class SetupCommand extends Command {
                 if (m.embedColor) {
                   const clr = colorMap[m.embedColor];
                   if (clr) {
-                    try { embed.setColor(clr as any); } catch {}
+                    try {
+                      embed.setColor(clr as any);
+                    } catch (e) {
+                      console.warn(`[SetupCommand] Sezione "${key}": colore "${m.embedColor}" non valido per l'embed:`, e);
+                    }
                   }
                 }
                 if (hasImage) embed.setImage(m.image!);
@@ -316,7 +345,8 @@ export class SetupCommand extends Command {
                 } else {
                   try {
                     await existing.edit(components ? { content, attachments: [] as any, components } : { content, attachments: [] as any });
-                  } catch {
+                  } catch (e) {
+                    console.warn(`[SetupCommand] Sezione "${key}": impossibile rimuovere gli allegati del messaggio ${m.id}, nuovo tentativo senza:`, e);
                     await existing.edit(components ? { content, components } : { content });
                   }
                 }
@@ -337,7 +367,11 @@ export class SetupCommand extends Command {
                 if (m.embedColor) {
                   const clr = colorMap[m.embedColor];
                   if (clr) {
-                    try { embed.setColor(clr as any); } catch {}
+                    try {
+                      embed.setColor(clr as any);
+                    } catch (e) {
+                      console.warn(`[SetupCommand] Sezione "${key}": colore "${m.embedColor}" non valido per l'embed:`, e);
+                    }
                   }
                 }
                 if (hasImage) embed.setImage(m.image!);
@@ -356,11 +390,13 @@ export class SetupCommand extends Command {
             }
           } catch (e) {
             errors++;
+            console.error(`[SetupCommand] Sezione "${key}": errore durante la pubblicazione/aggiornamento del messaggio ${m?.id ?? 'new'}:`, e);
             continue;
           }
         }
       } catch (e) {
         errors++;
+        console.error(`[SetupCommand] Errore durante l'elaborazione della sezione "${key}" (canale ${chanId}):`, e);
         continue;
       }
     }
